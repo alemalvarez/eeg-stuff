@@ -5,7 +5,7 @@ from loguru import logger
 import eeg_utils as eeg
 from CalculoMF import calcular_mf
 
-all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA')
+all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/HURH')
 
 one_file = all_files[0]
 one_name = names[0]

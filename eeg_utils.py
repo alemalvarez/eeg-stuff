@@ -18,63 +18,115 @@ def load_files_from_folder(folder_path: str) -> Tuple[list[dict], list[str]]:
         logger.error(f"Error loading mat files from folder: {e}")
         raise e
     return contents, names
+
+
+def _extract_important_params(cfg_data: dict) -> dict:
+    """
+    Helper function to extract important parameters from the configuration data.
     
+    Args:
+        cfg_data: The configuration data from the MATLAB .mat file
+        
+    Returns:
+        dict: A dictionary containing the extracted important parameters
+    """
+    cfg = cfg_data[0,0][0]
+    
+    params = {
+        'fs': int(cfg['fs'][0][0][0]),  # Sampling rate
+        
+        # Filtering info
+        'filtering': [
+            {
+                'type': f['type'][0],
+                'band': f['band'][0].tolist(),
+                'order': int(f['order'][0][0])
+            }
+            for f in cfg['filtering'][0][0]
+        ],
+        
+        # Trial length in seconds
+        'trial_length_secs': float(cfg['trial_length_secs'][0][0][0]),
+        
+        # Head model info
+        'head_model': str(cfg['head_model'][0][0]),
+
+        
+        # Source orientation
+        'source_orientation': str(cfg['source_orientation'][0][0][0][0]),
+        
+        # Atlas information
+        'atlas': str(cfg['ROIs'][0][0]['Atlas'][0][0][0]),
+        
+        # Number of discarded ICA components
+        'N_discarded_ICA': int(cfg['N_discarded_ICA'][0][0][0])
+    }
+    
+    return params
+
+def _extract_important_params_bbdds(cfg_data: dict) -> dict:
+    # Get the first element where actual data starts
+    cfg = cfg_data[0][0]
+    
+    params = {
+        'fs': int(cfg['fs'][0][0][0]),  # Sampling rate
+        
+        # Filtering info
+        'filtering': [
+            {
+                'type': 'BandPass' if f['type'][0][0][0] == 'B' else 'Notch' if f['type'][0][0][0] == 'N' else 'Unknown',
+                'band': f['band'][0].tolist(),
+                'order': int(f['order'][0][0])
+            }
+            for f in cfg['filtering'][0][0][0]
+        ],
+        
+        # Trial length in seconds
+        'trial_length_secs': float(cfg['artifacts'][0][0][0][0]['trial_length_secs'][0]),
+
+        
+        # Number of discarded ICA components
+        'N_discarded_ICA': int(cfg['N_discarded_ICA'][0][0][0])
+    }
+    
+    return params
+
+def _flatten_data(data: np.ndarray, cfg: dict) -> np.ndarray:
+    """Reshape the data into segments of specified length.
+    
+    Args:
+        data: Input data array of shape (n_total_samples, n_channels)
+        cfg: Configuration dict containing 'trial_length_secs' and 'fs'
+        
+    Returns:
+        Reshaped array of shape (n_segments, n_samples_per_segment, n_channels)
+    """
+    data = data[0, 0]  # Extract actual data from nested structure
+    
+    n_samples_per_segment = int(cfg['trial_length_secs'] * cfg['fs'])
+    n_channels = data.shape[1]  # Should be 68
+    
+    # Calculate number of complete segments
+    n_total_samples = data.shape[0]
+    n_segments = n_total_samples // n_samples_per_segment
+    
+    # Reshape into segments, truncating any incomplete segment
+    return data[:n_segments * n_samples_per_segment].reshape(n_segments, n_samples_per_segment, n_channels)
+
 def get_nice_data(
     raw_data: dict, 
     name: str,
     positives: list[str] = ['AD', 'MCI'],
+    comes_from_bbdds: bool = True
 ) -> Tuple[np.ndarray, dict, bool]:
     """Get the nice data from the MATLAB .mat file."""
     data = raw_data['data']
-    signal = data['signal'][0, 0]
+
     cfg = data['cfg']
-
-    def extract_important_params(cfg_data: dict) -> dict:
-        """
-        Helper function to extract important parameters from the configuration data.
-        
-        Args:
-            cfg_data: The configuration data from the MATLAB .mat file
-            
-        Returns:
-            dict: A dictionary containing the extracted important parameters
-        """
-        cfg = cfg_data[0,0][0]
-        
-        params = {
-            'fs': int(cfg['fs'][0][0][0]),  # Sampling rate
-            
-            # Filtering info
-            'filtering': [
-                {
-                    'type': f['type'][0],
-                    'band': f['band'][0].tolist(),
-                    'order': int(f['order'][0][0])
-                }
-                for f in cfg['filtering'][0][0]
-            ],
-            
-            # Trial length in seconds
-            'trial_length_secs': float(cfg['trial_length_secs'][0][0][0]),
-            
-            # Head model info
-            'head_model': str(cfg['head_model'][0][0]),
-
-            
-            # Source orientation
-            'source_orientation': str(cfg['source_orientation'][0][0][0][0]),
-            
-            # Atlas information
-            'atlas': str(cfg['ROIs'][0][0]['Atlas'][0][0][0]),
-            
-            # Number of discarded ICA components
-            'N_discarded_ICA': int(cfg['N_discarded_ICA'][0][0][0])
-        }
-        
-        return params
-    
-    cfg = extract_important_params(cfg)
+    cfg = _extract_important_params(cfg) if not comes_from_bbdds else _extract_important_params_bbdds(cfg)
     cfg['name'] = name
+
+    signal = data['signal'][0, 0] if not comes_from_bbdds else _flatten_data(data['signal'], cfg)
 
     positive = any(pos in name for pos in positives)
 

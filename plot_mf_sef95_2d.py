@@ -1,16 +1,18 @@
 import eeg_utils as eeg
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D # For custom legend
 from loguru import logger
 from typing import List
 from sklearn.cluster import KMeans # type: ignore
+from sklearn import metrics # type: ignore
 
 from CalculoMF import calcular_mf
 from CalculoSEF95 import calcular_sef95
 
 # Load all files
 logger.info("Loading EEG files...")
-all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA')
+all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/HURH')
 logger.success(f"Loaded {len(all_files)} files.")
 
 # Lists to store results
@@ -90,8 +92,8 @@ mean_mfs_array = np.array(mean_mfs, dtype=float)
 mean_sef95s_array = np.array(mean_sef95s, dtype=float)
 targets_array = np.array(targets, dtype=int) # Original targets
 
-if len(mean_mfs_array) == 0 or len(mean_sef95s_array) == 0 or len(mean_mfs_array) != len(mean_sef95s_array):
-    logger.error("Not enough data or mismatched data lengths for MF and SEF95 to plot. Exiting.")
+if len(mean_mfs_array) < 2 or len(mean_mfs_array) != len(mean_sef95s_array) or len(mean_mfs_array) != len(targets_array):
+    logger.error("Not enough data, mismatched data lengths, or missing targets. Exiting.")
     exit()
 
 # Prepare data for clustering
@@ -111,46 +113,84 @@ centroids = kmeans.cluster_centers_
 
 logger.success(f"Clustering complete. Found {num_clusters} clusters.")
 
-# Create the 2D scatter plot, colored by cluster
-logger.info("Generating 2D scatter plot colored by cluster...")
-plt.figure(figsize=(12, 8))
+# --- Clustering Evaluation Metrics ---
+ari_score = metrics.adjusted_rand_score(targets_array, cluster_labels)
+nmi_score = metrics.normalized_mutual_info_score(targets_array, cluster_labels)
+homogeneity, completeness, v_measure = metrics.homogeneity_completeness_v_measure(targets_array, cluster_labels)
+contingency_mat = metrics.cluster.contingency_matrix(targets_array, cluster_labels)
 
-colors = ['purple', 'orange', 'green', 'brown', 'pink'] # Add more if num_clusters > 5
+logger.info("--- Clustering Evaluation Metrics ---")
+logger.info(f"Adjusted Rand Index (ARI): {ari_score:.4f}")
+logger.info(f"Normalized Mutual Information (NMI): {nmi_score:.4f}")
+logger.info(f"Homogeneity: {homogeneity:.4f}")
+logger.info(f"Completeness: {completeness:.4f}")
+logger.info(f"V-measure: {v_measure:.4f}")
+logger.info(f"Contingency Matrix (True Labels vs Cluster Labels):\n{contingency_mat}")
+
+# --- Plotting with Cluster Color and True Target Marker ---
+logger.info("Generating 2D scatter plot (color by cluster, marker by true target)...")
+plt.figure(figsize=(14, 10))
+
+cluster_colors = ['purple', 'orange', 'green', 'cyan', 'magenta'] 
+# Ensure enough colors if num_clusters is high
+target_markers = ['o', 's', '^', 'X', 'P'] 
+# Ensure enough markers for unique target values. Assume 0 and 1 for now.
+unique_targets = np.unique(targets_array)
 
 for i in range(num_clusters):
-    cluster_mask = cluster_labels == i
-    plt.scatter(mean_mfs_array[cluster_mask], 
-                mean_sef95s_array[cluster_mask], 
-                color=colors[i % len(colors)], 
-                label=f'Cluster {i}', 
-                alpha=0.7, edgecolors='w')
-    # Plot centroids
-    plt.scatter(centroids[i, 0], centroids[i, 1], 
-                color=colors[i % len(colors)], marker='X', s=200, 
-                edgecolors='black', label=f'Cluster {i} Centroid')
-    logger.info(f"Cluster {i} Centroid: MF={centroids[i, 0]:.2f}, SEF95={centroids[i, 1]:.2f}")
+    for target_val_idx, target_val in enumerate(unique_targets):
+        mask = (cluster_labels == i) & (targets_array == target_val)
+        if np.any(mask):
+            plt.scatter(mean_mfs_array[mask], 
+                        mean_sef95s_array[mask], 
+                        color=cluster_colors[i % len(cluster_colors)], 
+                        marker=target_markers[target_val_idx % len(target_markers)], 
+                        alpha=0.7, s=50, # s is marker size
+                        label=f'Cluster {i}, Target {target_val}' if i == 0 and target_val_idx == 0 else "_nolegend_") # Only label once per combo for cleaner legend
 
-plt.title(f'Mean MF vs. Mean SEF95 by KMeans Cluster (k={num_clusters})', fontsize=16)
+# Plot centroids
+for i in range(num_clusters):
+    plt.scatter(centroids[i, 0], centroids[i, 1], 
+                color=cluster_colors[i % len(cluster_colors)], marker='X', s=250, 
+                edgecolors='black', linewidth=1.5, label=f'Cluster {i} Centroid')
+
+plt.title(f'Mean MF vs. SEF95 (k={num_clusters})\nColor: Cluster | Marker: True Target', fontsize=16)
 plt.xlabel('Mean Median Frequency (MF) (Hz)', fontsize=12)
 plt.ylabel('Mean Spectral Edge Frequency 95% (SEF95) (Hz)', fontsize=12)
-plt.legend()
-plt.grid(True, alpha=0.5)
 
-# Add cluster statistics to the plot
-stats_text = f"Total Subjects Clustered: {len(mean_mfs_array)}\n"
+# Custom legend
+legend_elements = []
 for i in range(num_clusters):
-    stats_text += f"Cluster {i} Size: {np.sum(cluster_labels == i)}\n"
+    legend_elements.append(Line2D([0], [0], marker='o', color='w', 
+                                  label=f'Cluster {i}', 
+                                  markerfacecolor=cluster_colors[i % len(cluster_colors)], markersize=10))
+for target_val_idx, target_val in enumerate(unique_targets):
+    legend_elements.append(Line2D([0], [0], marker=target_markers[target_val_idx % len(target_markers)], 
+                                  color='w', label=f'True Target {target_val}', 
+                                  markerfacecolor='gray', markersize=10))
+legend_elements.append(Line2D([0], [0], marker='X', color='w', label='Cluster Centroid',
+                           markerfacecolor='black', markersize=10, markeredgecolor='black'))
 
-# Remove last newline if it exists
+plt.legend(handles=legend_elements, loc='center left', bbox_to_anchor=(1, 0.5), fontsize=10)
+
+plt.grid(True, alpha=0.4)
+
+# Add statistics to the plot (inside the plot area)
+stats_text = f"Total Subjects: {len(mean_mfs_array)}\n"
+stats_text += f"ARI: {ari_score:.3f} | NMI: {nmi_score:.3f}\n"
+stats_text += f"Homogeneity: {homogeneity:.3f}\nCompleteness: {completeness:.3f}\nV-measure: {v_measure:.3f}\n\n"
+stats_text += "Cluster Sizes:\n"
+for i in range(num_clusters):
+    stats_text += f"  Cluster {i}: {np.sum(cluster_labels == i)}\n"
 stats_text = stats_text.strip()
 
-plt.text(0.02, 0.98, stats_text,
+plt.text(0.02, 0.02, stats_text,
          transform=plt.gca().transAxes,
-         fontsize=10,
-         verticalalignment='top',
-         bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.7))
+         fontsize=9,
+         verticalalignment='bottom',
+         bbox=dict(boxstyle='round,pad=0.5', facecolor='lightyellow', alpha=0.8))
 
-plt.tight_layout()
+plt.tight_layout(rect=(0, 0, 0.85, 1)) # Adjust rect to make space for legend outside
 logger.info("Displaying plot...")
 plt.show()
 
