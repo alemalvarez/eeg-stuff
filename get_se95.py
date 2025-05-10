@@ -6,7 +6,7 @@ import eeg_utils as eeg
 from CalculoSEF95 import calcular_sef95 # Import the SEF95 calculation function
 
 # Load data
-all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA')
+all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/HURH')
 
 # Process the first file
 one_file = all_files[0]
@@ -14,7 +14,7 @@ one_name = names[0]
 
 logger.info(f"Processing file: {one_name}")
 
-signal, cfg, target = eeg.get_nice_data(raw_data=one_file, name=one_name)
+signal, cfg, target = eeg.get_nice_data(raw_data=one_file, name=one_name, comes_from_bbdds=True)
 
 n_segments, n_samples, n_channels = signal.shape
 

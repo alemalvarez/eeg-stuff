@@ -26,7 +26,7 @@ for file_idx, (file, name) in enumerate(zip(all_files, names)):
     logger.info(f"Processing file {file_idx + 1}/{len(all_files)}: {name}")
     try:
         # Get signal and configuration
-        signal, cfg, target = eeg.get_nice_data(raw_data=file, name=name)
+        signal, cfg, target = eeg.get_nice_data(raw_data=file, name=name, positives=['AD'])
         
         # Get spectral density
         f, Pxx = eeg.get_spectral_density(signal, cfg)
