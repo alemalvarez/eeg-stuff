@@ -116,7 +116,7 @@ def _flatten_data(data: np.ndarray, cfg: dict) -> np.ndarray:
 def get_nice_data(
     raw_data: dict, 
     name: str,
-    positive_classes_binary: Optional[List[str]] = None,
+    positive_classes_binary: Optional[List[str]] = ['AD'],
     negative_classes_binary: Optional[List[str]] = None,
     ignore_classes_binary: Optional[List[str]] = None,
     comes_from_bbdds: bool = True
