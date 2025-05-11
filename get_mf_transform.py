@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal  # type: ignore
 import matplotlib.pyplot as plt
 # Assuming CalculoMF.py is in the same directory or accessible in the path
-from CalculoMF import calcular_mf 
+from median_frequency import calcular_mf 
 
 # --- 1. Generate Sample Raw Time-Domain Data ---
 fs = 1000  # Sampling frequency in Hz

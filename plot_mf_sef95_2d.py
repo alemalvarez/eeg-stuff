@@ -7,8 +7,8 @@ from typing import List
 from sklearn.cluster import KMeans # type: ignore
 from sklearn import metrics # type: ignore
 
-from CalculoMF import calcular_mf
-from CalculoSEF95 import calcular_sef95
+from median_frequency import calcular_mf
+from spectral_95_limit_frequency import calcular_sef95
 
 # Load all files
 logger.info("Loading EEG files...")

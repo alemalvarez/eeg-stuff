@@ -11,10 +11,10 @@ from sklearn.preprocessing import StandardScaler # type: ignore
 from sklearn.impute import SimpleImputer # type: ignore
 
 import eeg_utils as eeg
-from CalculoRP import calcular_rp
-from CalculoIAFTF import calcular_iaftf
-from CalculoMF import calcular_mf
-from CalculoSEF95 import calcular_sef95
+from relative_powers import calcular_rp
+from individual_alpha_frequency_transition_frequency import calcular_iaftf
+from median_frequency import calcular_mf
+from spectral_95_limit_frequency import calcular_sef95
 
 # --- Configuration ---
 DATA_FOLDER_PATH = '/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/POCTEP'

@@ -4,11 +4,11 @@ from loguru import logger
 from typing import List, Dict, Any, Optional, Tuple, Union
 
 import eeg_utils as eeg  # Assuming eeg_utils.py is in the Python path
-from CalculoSB import calcular_sb
+from spectral_bandwidth import calcular_sb
 
 # Attempt to import calcular_sc, which is a prerequisite
 try:
-    from CalculoSC import calcular_sc
+    from spectral_centroid import calcular_sc
 except ImportError:
     logger.error("Failed to import 'calcular_sc' from 'CalculoSC'. "
                  "This function is required to calculate Spectral Centroid (SC) "

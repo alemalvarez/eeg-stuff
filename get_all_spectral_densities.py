@@ -2,7 +2,7 @@ import eeg_utils as eeg
 import numpy as np
 import matplotlib.pyplot as plt
 from loguru import logger
-from CalculoMF import calcular_mf
+from median_frequency import calcular_mf
 from typing import List, Tuple, Optional
 
 # Load all files

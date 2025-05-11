@@ -4,7 +4,7 @@ from loguru import logger
 from typing import List, Dict, Any
 
 import eeg_utils as eeg
-from CalculoRP import calcular_rp # Import the Relative Power calculation function
+from relative_powers import calcular_rp # Import the Relative Power calculation function
 
 # --- Configuration ---
 DATA_FOLDER_PATH = '/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/HURH'

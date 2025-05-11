@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from loguru import logger
 
 import eeg_utils as eeg
-from CalculoMF import calcular_mf
+from median_frequency import calcular_mf
 
 all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/HURH')
 

@@ -3,10 +3,10 @@ from loguru import logger
 from typing import List, Dict, Any, Tuple, Optional
 
 import eeg_utils as eeg
-from CalculoRP import calcular_rp
-from CalculoIAFTF import calcular_iaftf
-from CalculoMF import calcular_mf
-from CalculoSEF95 import calcular_sef95
+from relative_powers import calcular_rp
+from individual_alpha_frequency_transition_frequency import calcular_iaftf
+from median_frequency import calcular_mf
+from spectral_95_limit_frequency import calcular_sef95
 
 # --- Configuration ---
 # IMPORTANT: Update this path to your actual data folder

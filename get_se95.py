@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from loguru import logger
 
 import eeg_utils as eeg
-from CalculoSEF95 import calcular_sef95 # Import the SEF95 calculation function
+from spectral_95_limit_frequency import calcular_sef95 # Import the SEF95 calculation function
 
 # Load data
 all_files, names = eeg.load_files_from_folder('/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/HURH')
