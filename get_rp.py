@@ -36,6 +36,10 @@ logger.info(f"Processing file: {one_name}")
 
 # --- Preprocessing and PSD Calculation ---
 signal, cfg, target = eeg.get_nice_data(raw_data=one_file, name=one_name, comes_from_bbdds=True)
+if target is None:
+    logger.error(f"File {one_name} has no target. Skipping.")
+    exit()
+    
 n_segments, n_samples, n_channels = signal.shape
 
 logger.info(f"Signal shape: {signal.shape} (segments, samples, channels)")

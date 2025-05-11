@@ -26,8 +26,10 @@ for file_idx, (file, name) in enumerate(zip(all_files, names)):
     logger.info(f"Processing file {file_idx + 1}/{len(all_files)}: {name}")
     try:
         # Get signal and configuration
-        signal, cfg, target = eeg.get_nice_data(raw_data=file, name=name, positives=['AD'])
-        
+        signal, cfg, target = eeg.get_nice_data(raw_data=file, name=name, positive_classes_binary=['AD'])
+        if target is None:
+            logger.error(f"File {name} has no target. Skipping.")
+            continue
         # Get spectral density
         f, Pxx = eeg.get_spectral_density(signal, cfg)
         

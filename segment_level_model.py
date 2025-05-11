@@ -5,10 +5,10 @@ from loguru import logger
 from typing import List, Dict, Tuple, Optional, Any
 
 from sklearn.model_selection import train_test_split # type: ignore
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier # type: ignore
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score # type: ignore
+from sklearn.preprocessing import StandardScaler # type: ignore
+from sklearn.impute import SimpleImputer # type: ignore
 
 import eeg_utils as eeg
 from CalculoRP import calcular_rp
@@ -17,7 +17,7 @@ from CalculoMF import calcular_mf
 from CalculoSEF95 import calcular_sef95
 
 # --- Configuration ---
-DATA_FOLDER_PATH = '/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/HURH'
+DATA_FOLDER_PATH = '/Users/alemalvarez/code-workspace/TFG/DATA/BBDDs/POCTEP'
 # Positive classes for binary classification as defined in eeg_utils or specific to this model
 POSITIVE_CLASSES_BINARY = ['AD', 'MCI'] # ADMIL, ADMOD, MCI will be positive
 
@@ -45,7 +45,8 @@ MULTI_CLASS_CATEGORIES: Dict[str, str] = {
     "ADMIL": "ADMIL",
     "ADMOD": "ADMOD",
     "HC": "HC",
-    "MCI": "MCI"
+    "MCI": "MCI",
+    "ADSEV": "ADSEV"
 }
 
 def get_multiclass_label(file_name: str) -> Optional[str]:
@@ -120,9 +121,12 @@ def main() -> None:
             signal_data, cfg, is_positive_file = eeg.get_nice_data(
                 raw_data=mat_content, 
                 name=file_name, 
-                positives=POSITIVE_CLASSES_BINARY, # Ensure this matches desired binary definition
+                positive_classes_binary=POSITIVE_CLASSES_BINARY, # Ensure this matches desired binary definition
                 comes_from_bbdds=True
             )
+            if is_positive_file is None:
+                logger.error(f"File {file_name} has no target. Skipping.")
+                continue
             multiclass_label_file = get_multiclass_label(file_name)
 
             if signal_data.ndim == 2:

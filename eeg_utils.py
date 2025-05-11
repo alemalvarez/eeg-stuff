@@ -1,5 +1,5 @@
 import os
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 from loguru import logger
 import numpy as np
 import scipy.io as sio  # type: ignore
@@ -116,21 +116,65 @@ def _flatten_data(data: np.ndarray, cfg: dict) -> np.ndarray:
 def get_nice_data(
     raw_data: dict, 
     name: str,
-    positives: list[str] = ['AD', 'MCI'],
+    positive_classes_binary: Optional[List[str]] = None,
+    negative_classes_binary: Optional[List[str]] = None,
+    ignore_classes_binary: Optional[List[str]] = None,
     comes_from_bbdds: bool = True
-) -> Tuple[np.ndarray, dict, bool]:
-    """Get the nice data from the MATLAB .mat file."""
-    data = raw_data['data']
+) -> Tuple[np.ndarray, dict, Optional[int]]:
+    """Get the nice data from the MATLAB .mat file.
 
-    cfg = data['cfg']
-    cfg = _extract_important_params(cfg) if not comes_from_bbdds else _extract_important_params_bbdds(cfg)
+    Args:
+        raw_data: The raw data loaded from a .mat file.
+        name: The name of the file.
+        positive_classes_binary: List of filename patterns indicating positive cases for binary classification.
+        negative_classes_binary: List of filename patterns indicating negative cases for binary classification.
+        ignore_classes_binary: List of filename patterns to ignore entirely for processing.
+        comes_from_bbdds: Flag indicating if the data comes from BBDDs structure.
+
+    Returns:
+        A tuple (signal_array, config_dict, binary_target) or None.
+        signal_array: The processed EEG signal.
+        config_dict: Extracted configuration.
+        binary_target: 1 if positive, 0 if negative, None if not specified for binary task.
+        Returns None if the file is marked to be ignored by ignore_classes_binary.
+    """
+
+    # Handle ignored classes first
+    if ignore_classes_binary:
+        for ignore_class_pattern in ignore_classes_binary:
+            if ignore_class_pattern.upper() in name.upper():
+                logger.debug(f"File {name} matches ignore pattern '{ignore_class_pattern}'. Skipping this file.")
+                return (np.array([]), {}, None)
+
+    data = raw_data['data']
+    cfg_data = data['cfg'] # Renamed for clarity before passing to specific extractors
+
+    cfg = _extract_important_params(cfg_data) if not comes_from_bbdds else _extract_important_params_bbdds(cfg_data)
     cfg['name'] = name
 
-    signal = data['signal'][0, 0] if not comes_from_bbdds else _flatten_data(data['signal'], cfg)
+    signal_arr = data['signal'][0, 0] if not comes_from_bbdds else _flatten_data(data['signal'], cfg) # Renamed for clarity
 
-    positive = any(pos in name for pos in positives)
+    binary_target: Optional[int] = None
+    determined_explicitly = False
 
-    return signal, cfg, positive
+    if positive_classes_binary:
+        for pos_pattern in positive_classes_binary:
+            if pos_pattern.upper() in name.upper():
+                binary_target = 1
+                determined_explicitly = True
+                break
+    
+    if not determined_explicitly and negative_classes_binary: # Only check if not already positive
+        for neg_pattern in negative_classes_binary:
+            if neg_pattern.upper() in name.upper():
+                binary_target = 0
+                determined_explicitly = True
+                break
+    
+    # If binary_target is still None after checking explicit lists, it remains None.
+    # The consumer of this function will decide how to handle segments with a None binary_target.
+
+    return signal_arr, cfg, binary_target
 
 def get_spectral_density(
     signal_data: np.ndarray, 
